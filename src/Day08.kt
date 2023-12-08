@@ -31,57 +31,35 @@ private class Day08 {
             from to (left to right)
         }
 
-        val maxSteps = graph.size * 2 + 10
-
         //(v, startAtSteps, stepsToTake) -> v2
         val shortcuts = graph.keys.associateWith { v ->
-            steps.indices.associateWith { startAtSteps ->
-                mutableListOf(v)
-//                var curV = v
-//                (0 until maxSteps).map { len ->
-//                    curV.also {
-//                        val atSteps = (startAtSteps + len) % steps.length
-//                        curV = if (steps[atSteps] == 'L') graph[curV]!!.first else graph[curV]!!.second
-//                    }
-//                }
-            }
+            Array(steps.length) { hashMapOf(0 to v) }
         }
 
         fun getShortcut(v0: String, startAtSteps: Int, stepsToTake: Int): String {
-            val curShortcuts = shortcuts[v0]!![startAtSteps]!!
-            while (stepsToTake >= curShortcuts.size) {
-                val lastV = curShortcuts.last()
-                val at = (startAtSteps + curShortcuts.size - 1) % steps.length
-                val nextV = if (steps[at] == 'L') graph[lastV]!!.first else graph[lastV]!!.second
-                curShortcuts += nextV
+            return shortcuts[v0]!![startAtSteps].getOrPut(stepsToTake) {
+                val next = if (steps[startAtSteps] == 'L') graph[v0]!!.first else graph[v0]!!.second
+                getShortcut(next, (startAtSteps + 1) % steps.length, stepsToTake - 1)
             }
-            return curShortcuts[stepsToTake]
         }
 
-        println("Shortcuts done")
-
-        // This can be hugely optimized by going lazy like getShortcut
         val stepsToZ = graph.keys.associateWith { v ->
-            steps.indices.associateWith { startAtSteps ->
-                var stepsToTake = 1
-                val visited = hashSetOf<Pair<String, Int>>()
-                while (true) {
-                    val next = getShortcut(v, startAtSteps, stepsToTake)
-                    if (!visited.add(next to (startAtSteps + stepsToTake) % steps.length)) return@associateWith Int.MAX_VALUE
-                    if (next.endsWith('Z')) return@associateWith stepsToTake
-                    stepsToTake++
-                }
-                Int.MAX_VALUE
-            }
+            hashMapOf<Int, Int>()
         }
 
-        println("steps to Z done")
+        fun getStepsToZ(v0: String, startAtSteps: Int): Int {
+            return stepsToZ[v0]!!.getOrPut(startAtSteps) {
+                val v1 = getShortcut(v0, startAtSteps, 1)
+                val tail = if (v1.endsWith('Z')) 0 else getStepsToZ(v1, (startAtSteps + 1) % steps.length)
+                1 + tail
+            }
+        }
 
         var atSteps = 0
         var atV = graph.keys.filter { it.endsWith("A") }
         var ans = 0L
         while (atV.any { !it.endsWith('Z') }) {
-            val maxStepsNeeded = atV.maxOf { stepsToZ[it]!![atSteps]!! }
+            val maxStepsNeeded = atV.maxOf { getStepsToZ(it, atSteps) }
             require(maxStepsNeeded != Int.MAX_VALUE)
             atV = atV.map { getShortcut(it, atSteps, maxStepsNeeded) }
             atSteps += maxStepsNeeded
