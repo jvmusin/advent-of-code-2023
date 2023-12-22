@@ -104,7 +104,9 @@ class Day22(val input: List<String>) {
             for (b in bricks) fall(b)
         }
 
-        val pool = Executors.newFixedThreadPool(Runtime.getRuntime().availableProcessors() - 1)
+        val poolSize = Runtime.getRuntime().availableProcessors() - 1
+        println("Using pool size = $poolSize")
+        val pool = Executors.newFixedThreadPool(poolSize)
         fullFall(bricks)
         val ans = AtomicInteger(0)
         val totalDone = AtomicInteger(0)
